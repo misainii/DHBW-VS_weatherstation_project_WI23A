@@ -41,6 +41,8 @@ def get_meta() -> MetaResponse:
             latest_end_year=meta["latest_end_year"],
             source_mode=settings.ghcn_source_mode,
         )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Fehler in /meta: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -101,6 +103,8 @@ def search_stations(
             },
             stations=stations_response,
         )
+    except HTTPException:
+        raise
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as e:
@@ -179,6 +183,8 @@ def climate_summary(
             seasonal_series=summary["seasonal_series"],
             table=summary["table"],
         )
+    except HTTPException:
+        raise
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as e:
