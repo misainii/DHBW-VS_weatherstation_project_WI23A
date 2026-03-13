@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 class AWSGHCNClient:
-    """Lädt GHCN-Daten vom öffentlichen NOAA‑AWS‑Bucket."""
+    """loading GHCN-data from NOAA‑AWS‑Bucket."""
 
     BASE_URL = "https://noaa-ghcn-pds.s3.amazonaws.com"
     STATIONS_PATH = "/ghcnd-stations.txt"
