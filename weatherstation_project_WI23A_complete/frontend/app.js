@@ -5,7 +5,8 @@ const state = {
     page: 'search',
     activeSeries: new Set(['annual_tmin', 'annual_tmax', 'spring_tmin', 'spring_tmax', 'summer_tmin', 'summer_tmax', 'autumn_tmin', 'autumn_tmax', 'winter_tmin', 'winter_tmax']),
     map: null,
-    markers: []
+    markers: [],
+    radiusCircle: null  // für den Kreis des Suchradius
 };
 
 const $ = id => document.getElementById(id);
@@ -20,8 +21,10 @@ function showPage(page) {
 
 async function searchStations() {
     const feedback = $('searchFeedback');
+    // Vorherige Meldung löschen
     feedback.textContent = '';
     feedback.classList.remove('error');
+
     const params = new URLSearchParams({
         latitude: $('latitude').value,
         longitude: $('longitude').value,
@@ -37,10 +40,11 @@ async function searchStations() {
             throw new Error(`Server antwortet mit ${res.status}: ${text}`);
         }
         const data = await res.json();
+        // Prüfen, ob Stationen gefunden wurden
         if (!data.stations || data.stations.length === 0) {
             feedback.textContent = "Station couldn't be found. Try again.";
             feedback.classList.add('error');
-            return;
+            return; // Nicht zur Stationsseite wechseln
         }
         state.stations = data.stations;
         state.selectedId = state.stations[0]?.station_id || null;
@@ -296,15 +300,27 @@ function drawChart() {
 function initMap() {
     const lat = Number($('latitude').value);
     const lon = Number($('longitude').value);
+    const radiusKm = Number($('radius').value) || 60; // Fallback, falls leer
+
     if (!state.map) {
         state.map = L.map('leafletMap').setView([lat, lon], 7);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(state.map);
     } else {
         state.map.setView([lat, lon], 7);
     }
-    state.markers.forEach(m => m.remove());
+
+    // Alte Marker entfernen
+    if (state.markers) {
+        state.markers.forEach(m => m.remove());
+    }
     state.markers = [];
 
+    // Alten Kreis entfernen, falls vorhanden
+    if (state.radiusCircle) {
+        state.radiusCircle.remove();
+    }
+
+    // Suchzentrum als Marker
     L.circleMarker([lat, lon], {
         radius: 8,
         color: '#dc3545',
@@ -312,6 +328,17 @@ function initMap() {
         fillOpacity: 1
     }).addTo(state.map).bindTooltip('Search Center');
 
+    // Radius-Kreis zeichnen
+    state.radiusCircle = L.circle([lat, lon], {
+        radius: radiusKm * 1000,
+        color: '#dc3545',
+        fillColor: '#dc3545',
+        fillOpacity: 0.1,
+        weight: 2,
+        interactive: false  // verhindert, dass der Kreis Klicks abfängt
+    }).addTo(state.map);
+
+    // Stationen als Marker
     state.stations.forEach(s => {
         const m = L.circleMarker([s.latitude, s.longitude], {
             radius: s.station_id === state.selectedId ? 8 : 6,
@@ -322,16 +349,20 @@ function initMap() {
         m.bindTooltip(`${s.name} (${s.distance_km?.toFixed(1)} km)`);
         m.on('click', () => {
             state.selectedId = s.station_id;
-            initMap();
+            initMap(); // Karte neu zeichnen (Marker werden aktualisiert)
             renderStationTable();
         });
         state.markers.push(m);
     });
 
+    // Zoom anpassen, um alle Stationen + Zentrum zu zeigen
     if (state.stations.length > 0) {
         const bounds = L.latLngBounds([[lat, lon]]);
         state.stations.forEach(s => bounds.extend([s.latitude, s.longitude]));
-        state.map.fitBounds(bounds, {padding: [50,50]});
+        state.map.fitBounds(bounds, { padding: [50, 50] });
+    } else {
+        // Wenn keine Stationen, trotzdem auf Zentrum zoomen (Radius sichtbar)
+        state.map.setView([lat, lon], 8);
     }
 }
 
