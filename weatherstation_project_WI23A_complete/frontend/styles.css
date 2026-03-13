@@ -115,6 +115,24 @@ select {
   background: rgba(0, 0, 0, 0.16);
 }
 
+/* Language switcher */
+.language-switcher {
+  display: flex;
+  gap: 0.3rem;
+  margin-left: auto;
+}
+.lang-btn {
+  background: transparent;
+  border: 1px solid #aaa;
+  border-radius: 4px;
+  padding: 0.2rem 0.5rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+.lang-btn:hover {
+  background: rgba(255,255,255,0.5);
+}
+
 .page-layout {
   display: grid;
   grid-template-columns: 290px minmax(0, 1fr);
@@ -574,7 +592,7 @@ select {
   display: none;
 }
 
-/* Button Group - vertikale Anordnung */
+/* Button group - vertical arrangement */
 .button-group {
   display: flex;
   flex-direction: column;
@@ -583,7 +601,7 @@ select {
   align-items: stretch;
 }
 
-/* Einheitliche Größe für "Select New Station" und "Back to Stations" */
+/* Uniform size for "Select New Station" and "Back to Stations" */
 .select-new-button,
 .subtle-button {
   width: 100%;
@@ -603,7 +621,7 @@ select {
 .select-new-button {
   background: var(--select-btn);
   color: var(--text);
-  border: 1px solid transparent; /* gleicht den Border des anderen Buttons aus */
+  border: 1px solid transparent; /* matches border of the other button */
 }
 
 .subtle-button {
@@ -611,13 +629,13 @@ select {
   border: 1px solid #aaa;
 }
 
-/* Hover-Effekt für beide */
+/* Hover effect for both */
 .select-new-button:hover,
 .subtle-button:hover {
   filter: brightness(0.95);
 }
 
-/* Responsive Design */
+/* Responsive design */
 @media (max-width: 1180px) {
   .page-layout,
   .climate-content-row,
