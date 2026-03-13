@@ -48,34 +48,33 @@ def get_meta() -> MetaResponse:
 
 @app.get(f"{settings.api_prefix}/stations", response_model=SearchResponse)
 def search_stations(
-    latitude: float = Query(..., description="Breitengrad (-90 bis 90)"),
-    longitude: float = Query(..., description="Längengrad (-180 bis 180)"),
-    radius_km: float = Query(..., gt=0, description="Suchradius in Kilometern"),
-    limit: int = Query(..., ge=1, le=20, description="Maximale Anzahl der Ergebnisse"),
-    start_year: int = Query(..., description="Startjahr für die Datenabfrage"),
-    end_year: int = Query(..., description="Endjahr für die Datenabfrage"),
+    latitude: float = Query(..., description="latitude (-90 bis 90)"),
+    longitude: float = Query(..., description="longitude (-180 bis 180)"),
+    radius_km: float = Query(..., gt=0, description="search radius in kilometers"),
+    limit: int = Query(..., ge=1, le=20, description="maximum search results"),
+    start_year: int = Query(..., description="start year"),
+    end_year: int = Query(..., description="end year"),
 ) -> SearchResponse:
     """
-    Sucht Wetterstationen im angegebenen Umkreis, die für den gesamten
-    angeforderten Jahresbereich Daten liefern können.
+    searching weather station in given radius, only for the given years
     """
     # Validierung der Eingaben
     if latitude < -90 or latitude > 90:
-        raise HTTPException(status_code=400, detail="latitude muss zwischen -90 und 90 liegen")
+        raise HTTPException(status_code=400, detail="latitude needs to be between -90 and 90")
     
     if longitude < -180 or longitude > 180:
-        raise HTTPException(status_code=400, detail="longitude muss zwischen -180 und 180 liegen")
+        raise HTTPException(status_code=400, detail="longitude needs to be between -180 and 180")
     
     if start_year > end_year:
         raise HTTPException(
             status_code=400, 
-            detail=f"start_year ({start_year}) darf nicht größer als end_year ({end_year}) sein"
+            detail=f"start_year ({start_year}) start shouldn't exceed end year ({end_year})"
         )
     
     try:
         matches = service.search_stations(latitude, longitude, radius_km, limit, start_year, end_year)
         
-        # Konvertiere die Stationen in das Response-Format
+        # convert station into response-format
         stations_response = []
         for station in matches:
             stations_response.append(
@@ -112,21 +111,21 @@ def search_stations(
 @app.get(f"{settings.api_prefix}/stations/{{station_id}}/climate", response_model=ClimateResponse)
 def climate_summary(
     station_id: str,
-    start_year: int = Query(..., description="Startjahr für die Analyse"),
-    end_year: int = Query(..., description="Endjahr für die Analyse"),
-    adjust_to_available: bool = Query(True, description="Jahresbereich automatisch an verfügbare Daten anpassen"),
+    start_year: int = Query(..., description="start year for analysis"),
+    end_year: int = Query(..., description="end year for analysis"),
+    adjust_to_available: bool = Query(True, description="autumatically change yearly range for data analysis"),
 ) -> ClimateResponse:
     """
-    Liefert eine Klimazusammenfassung für eine Station.
+    shows climate summary
     """
     if start_year > end_year:
         raise HTTPException(
             status_code=400, 
-            detail=f"start_year ({start_year}) darf nicht größer als end_year ({end_year}) sein"
+            detail=f"start_year ({start_year}) shouldn' exceed end year ({end_year}) "
         )
     
     try:
-        # Hole verfügbaren Jahresbereich der Station
+        # get available range
         available_range = service.get_station_years_range(station_id)
         
         original_start = start_year
@@ -142,14 +141,14 @@ def climate_summary(
             if start_year > end_year:
                 raise HTTPException(
                     status_code=400,
-                    detail=f"Keine Daten für Station {station_id} im Bereich "
-                           f"{original_start}-{original_end} verfügbar. "
+                    detail=f"no available data for station {station_id} in range "
+                           f"{original_start}-{original_end} available. "
                            f"Verfügbarer Bereich: {available_range['first_year']}-{available_range['last_year']}"
                 )
         
         summary = service.get_climate_summary(station_id, start_year, end_year)
         
-        # Station konvertieren
+        # convert station
         station_data = summary["station"]
         station_response = StationResponse(
             station_id=station_data.station_id,
