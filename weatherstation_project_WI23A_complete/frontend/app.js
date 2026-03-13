@@ -1,3 +1,92 @@
+const translations = {
+  de: {
+    // General
+    appTitle: "Weatherstation Explorer",
+    browserPath: "wetterstation.draft/3.1.1",
+    // Search page
+    searchTitle: 'Suche nach <span class="circled">mehr</span>…',
+    searchSidebarTitle: "Suche nach deiner Station",
+    latitudeLabel: "Breitengrad:",
+    longitudeLabel: "Längengrad:",
+    radiusLabel: "Radius (km):",
+    limitLabel: "Auswahl:",
+    startYearLabel: "Start:",
+    endYearLabel: "Ende:",
+    searchButton: "Suchen!",
+    searchFeedbackNotFound: "Station konnte nicht gefunden werden. Versuche es erneut.",
+    heroText: "Finde Wetterstationen, die zum Global Historical Climatology Network beitragen",
+    // Stations page
+    stationsTitle: '<span class="circled">Verfügbare</span> Stationen …',
+    stationsSidebarTitle: "Suche nach deiner Station",
+    selectByNameLabel: "Nach Name auswählen:",
+    showDataButton: "Daten anzeigen",
+    backButton: "Zurück",
+    stationNotes1: "Klicke auf die Marker auf der Karte, um eine Station auszuwählen",
+    stationNotes2: "Einige Stationen enthalten fehlende Daten!",
+    stationTableName: "Name",
+    stationTableDistance: "Entfernung",
+    stationTableData: "Daten",
+    stationTableChoose: "Auswählen",
+    // Climate page
+    climateSidebarTitle: "Daten für deine Station",
+    climateTitle: 'Daten für <span id="climateTitleStation">Station</span> …',
+    legendTitle: "Datenreihen",
+    gapWarning: "Warnung: Datenlücken vorhanden",
+    compactTableYear: "Jahr",
+    selectNewStationButton: "Neue Station auswählen",
+    backToStationsButton: "Zurück zu den Stationen",
+    // Error messages (general)
+    errorPrefix: "Fehler:",
+    noDataSelected: "Keine Daten ausgewählt",
+    noPoints: "Keine Punkte vorhanden",
+    noTableData: "Keine Tabellendaten verfügbar.",
+    noDataForSelected: "Keine Daten für ausgewählte Reihen.",
+  },
+  en: {
+    // General
+    appTitle: "Weatherstation Explorer",
+    browserPath: "weatherstation.draft/3.1.1",
+    // Search page
+    searchTitle: 'Search for <span class="circled">more</span>…',
+    searchSidebarTitle: "Search for your station",
+    latitudeLabel: "Latitude:",
+    longitudeLabel: "Longitude:",
+    radiusLabel: "Radius (km):",
+    limitLabel: "Selection:",
+    startYearLabel: "Start:",
+    endYearLabel: "End:",
+    searchButton: "Search!",
+    searchFeedbackNotFound: "Station couldn't be found. Try again.",
+    heroText: "Find weather stations contributing to the Global Historical Climatology Network",
+    // Stations page
+    stationsTitle: '<span class="circled">Available</span> Stations …',
+    stationsSidebarTitle: "Search for your station",
+    selectByNameLabel: "Select by Name:",
+    showDataButton: "Show Data",
+    backButton: "Back",
+    stationNotes1: "Click on map markers to select a station",
+    stationNotes2: "Some stations contain missing data!",
+    stationTableName: "Name",
+    stationTableDistance: "Distance",
+    stationTableData: "Data",
+    stationTableChoose: "Choose",
+    // Climate page
+    climateSidebarTitle: "Data for your station",
+    climateTitle: '<span id="climateTitleStation">Station</span> data…',
+    legendTitle: "Data series",
+    gapWarning: "Warning: Data gaps present",
+    compactTableYear: "Year",
+    selectNewStationButton: "Select New Station",
+    backToStationsButton: "Back to Stations",
+    // Error messages
+    errorPrefix: "Error:",
+    noDataSelected: "No data selected",
+    noPoints: "No points available",
+    noTableData: "No table data available.",
+    noDataForSelected: "No data for selected series.",
+  }
+};
+
 const state = {
     stations: [],
     selectedId: null,
@@ -6,7 +95,8 @@ const state = {
     activeSeries: new Set(['annual_tmin', 'annual_tmax', 'spring_tmin', 'spring_tmax', 'summer_tmin', 'summer_tmax', 'autumn_tmin', 'autumn_tmax', 'winter_tmin', 'winter_tmax']),
     map: null,
     markers: [],
-    radiusCircle: null  // search radius cricle
+    radiusCircle: null,  // search radius circle
+    language: 'de'       // default, will be overridden later
 };
 
 const $ = id => document.getElementById(id);
@@ -19,9 +109,59 @@ function showPage(page) {
     if (page === 'stations') setTimeout(initMap, 100);
 }
 
+// Translation functions
+function setLanguage(lang) {
+    if (lang === state.language) return;
+    state.language = lang;
+    translatePage();
+    // Redraw dynamic parts not covered by translatePage
+    if (state.page === 'stations') {
+        renderStationTable(); // table header is already translated, but select options?
+        // Select options contain station names, they remain unchanged.
+    } else if (state.page === 'climate') {
+        renderClimate();
+    }
+    localStorage.setItem('preferred-language', lang);
+}
+
+function translatePage() {
+    const lang = state.language;
+    const t = translations[lang];
+
+    // All elements with data-i18n (plain text)
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (t[key] !== undefined) {
+            el.innerText = t[key];
+        }
+    });
+
+    // All elements with data-i18n-html (HTML content)
+    document.querySelectorAll('[data-i18n-html]').forEach(el => {
+        const key = el.getAttribute('data-i18n-html');
+        if (t[key] !== undefined) {
+            el.innerHTML = t[key];
+        }
+    });
+
+    // All elements with data-i18n-placeholder (placeholder attribute)
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+        const key = el.getAttribute('data-i18n-placeholder');
+        if (t[key] !== undefined) {
+            el.placeholder = t[key];
+        }
+    });
+
+    // Browser path
+    const browserPathEl = $('browserPath');
+    if (browserPathEl) {
+        browserPathEl.innerText = t.browserPath;
+    }
+}
+
 async function searchStations() {
     const feedback = $('searchFeedback');
-    // Vorherige Meldung löschen
+    // Clear previous message
     feedback.textContent = '';
     feedback.classList.remove('error');
 
@@ -37,21 +177,21 @@ async function searchStations() {
         const res = await fetch(`/api/stations?${params}`);
         if (!res.ok) {
             const text = await res.text();
-            throw new Error(`Server antwortet mit ${res.status}: ${text}`);
+            throw new Error(`Server responds with ${res.status}: ${text}`);
         }
         const data = await res.json();
-        // Prüfen, ob Stationen gefunden wurden
+        // Check if stations were found
         if (!data.stations || data.stations.length === 0) {
-            feedback.textContent = "Station couldn't be found. Try again.";
+            feedback.textContent = translations[state.language].searchFeedbackNotFound;
             feedback.classList.add('error');
-            return; // Nicht zur Stationsseite wechseln
+            return; // Do not switch to stations page
         }
         state.stations = data.stations;
         state.selectedId = state.stations[0]?.station_id || null;
         renderStationTable();
         showPage('stations');
     } catch (err) {
-        alert('Fehler: ' + err.message);
+        alert(translations[state.language].errorPrefix + ' ' + err.message);
     }
 }
 
@@ -64,7 +204,7 @@ function renderStationTable() {
             <td>${s.name}</td>
             <td>${s.distance_km?.toFixed(1) || '?'} km</td>
             <td>${s.first_year || '?'} - ${s.last_year || '?'}</td>
-            <td><button onclick="window.selectStation('${s.station_id}')">Select</button></td>
+            <td><button onclick="window.selectStation('${s.station_id}')">${translations[state.language].stationTableChoose}</button></td>
         `;
     });
     const select = $('stationSelect');
@@ -88,17 +228,17 @@ async function loadClimate() {
         const res = await fetch(`/api/stations/${state.selectedId}/climate?start_year=${$('startYear').value}&end_year=${$('endYear').value}`);
         if (!res.ok) {
             const text = await res.text();
-            throw new Error(`Server antwortet mit ${res.status}: ${text}`);
+            throw new Error(`Server responds with ${res.status}: ${text}`);
         }
         const data = await res.json();
         state.climate = data;
-        // Debug-Ausgaben in der Konsole
+        // Debug output in console
         console.log('Climate data received:', data);
         console.log('Seasonal series:', data.seasonal_series);
         renderClimate();
         showPage('climate');
     } catch (err) {
-        alert('Fehler: ' + err.message);
+        alert(translations[state.language].errorPrefix + ' ' + err.message);
     }
 }
 
@@ -113,7 +253,7 @@ function renderLegend() {
     const legend = $('chartLegend');
     legend.innerHTML = '';
 
-    // Alle vorhandenen Reihen (annual + seasonal)
+    // All existing series (annual + seasonal)
     const allSeries = [
         ...(state.climate?.annual_series || []),
         ...(state.climate?.seasonal_series || [])
@@ -122,11 +262,11 @@ function renderLegend() {
     console.log('All series for legend:', allSeries);
 
     if (allSeries.length === 0) {
-        legend.innerHTML = '<p>Keine Datenreihen verfügbar.</p>';
+        legend.innerHTML = '<p>No data series available.</p>';
         return;
     }
 
-    // Farbzuordnung
+    // Color mapping
     const colorMap = {
         'annual_tmin': '#2d73c4',
         'annual_tmax': '#d23d30',
@@ -142,7 +282,7 @@ function renderLegend() {
 
     allSeries.forEach(s => {
         const name = s.name;
-        const label = s.label_de || s.label_en || name;
+        const label = state.language === 'de' ? s.label_de : s.label_en || name;
         const color = colorMap[name] || '#888';
 
         const labelEl = document.createElement('label');
@@ -171,22 +311,33 @@ function toggleSeries(name) {
 function renderTable() {
     const container = $('compactTable');
     if (!state.climate?.table) {
-        container.innerHTML = '<p>Keine Tabellendaten verfügbar.</p>';
+        container.innerHTML = `<p>${translations[state.language].noTableData}</p>`;
         return;
     }
 
-    // only actives in table
+    // All available series (annual + seasonal)
+    const allSeries = [
+        ...(state.climate.annual_series || []),
+        ...(state.climate.seasonal_series || [])
+    ];
+    const seriesMap = {};
+    allSeries.forEach(s => seriesMap[s.name] = s);
+
     const active = Array.from(state.activeSeries).filter(name => 
         state.climate.table.some(row => row[name] !== undefined)
     );
 
     if (active.length === 0) {
-        container.innerHTML = '<p>Keine Daten für ausgewählte Reihen.</p>';
+        container.innerHTML = `<p>${translations[state.language].noDataForSelected}</p>`;
         return;
     }
 
-    let html = '<table><thead><tr><th>Year</th>';
-    active.forEach(name => html += `<th>${name.replace('_', ' ').toUpperCase()}</th>`);
+    let html = '<table><thead><tr><th>' + translations[state.language].compactTableYear + '</th>';
+    active.forEach(name => {
+        const s = seriesMap[name];
+        const label = s ? (state.language === 'de' ? s.label_de : s.label_en) : name;
+        html += `<th>${label}</th>`;
+    });
     html += '</tr></thead><tbody>';
 
     state.climate.table.forEach(row => {
@@ -214,13 +365,13 @@ function drawChart() {
     const activeSeriesData = allSeries.filter(s => state.activeSeries.has(s.name));
 
     if (activeSeriesData.length === 0) {
-        svg.innerHTML = '<text x="380" y="200" text-anchor="middle">Keine Daten ausgewählt</text>';
+        svg.innerHTML = `<text x="380" y="200" text-anchor="middle">${translations[state.language].noDataSelected}</text>`;
         return;
     }
 
     const points = activeSeriesData.flatMap(s => s.points);
     if (points.length === 0) {
-        svg.innerHTML = '<text x="380" y="200" text-anchor="middle">Keine Punkte vorhanden</text>';
+        svg.innerHTML = `<text x="380" y="200" text-anchor="middle">${translations[state.language].noPoints}</text>`;
         return;
     }
 
@@ -236,7 +387,7 @@ function drawChart() {
 
     svg.innerHTML += `<rect x="0" y="0" width="${w}" height="${h}" fill="white"/>`;
 
-    // Y-Achse
+    // Y axis
     for (let i = 0; i <= 5; i++) {
         const val = minVal + (maxVal - minVal) * i / 5;
         const y = pad.t + (h - pad.t - pad.b) * (1 - (val - minVal) / (maxVal - minVal));
@@ -244,7 +395,7 @@ function drawChart() {
         svg.innerHTML += `<text x="${pad.l-10}" y="${y+5}" text-anchor="end">${val.toFixed(1)}</text>`;
     }
 
-    // X-Achse
+    // X axis
     for (let y = minYear; y <= maxYear; y += Math.ceil((maxYear-minYear)/8)) {
         const x = pad.l + (w - pad.l - pad.r) * (y - minYear) / (maxYear - minYear);
         svg.innerHTML += `<line x1="${x}" y1="${pad.t}" x2="${x}" y2="${h-pad.b}" stroke="#eee" stroke-dasharray="4"/>`;
@@ -300,7 +451,7 @@ function drawChart() {
 function initMap() {
     const lat = Number($('latitude').value);
     const lon = Number($('longitude').value);
-    const radiusKm = Number($('radius').value) || 60; // Fallback, falls leer
+    const radiusKm = Number($('radius').value) || 60; // Fallback if empty
 
     if (!state.map) {
         state.map = L.map('leafletMap').setView([lat, lon], 7);
@@ -328,14 +479,14 @@ function initMap() {
         fillOpacity: 1
     }).addTo(state.map).bindTooltip('Search Center');
 
-    // draw radius center
+    // draw radius circle
     state.radiusCircle = L.circle([lat, lon], {
         radius: radiusKm * 1000,
         color: '#dc3545',
         fillColor: '#dc3545',
         fillOpacity: 0.1,
         weight: 2,
-        interactive: false  // verhindert, dass der Kreis Klicks abfängt
+        interactive: false  // prevents the circle from intercepting clicks
     }).addTo(state.map);
 
     // stations as markers
@@ -349,22 +500,33 @@ function initMap() {
         m.bindTooltip(`${s.name} (${s.distance_km?.toFixed(1)} km)`);
         m.on('click', () => {
             state.selectedId = s.station_id;
-            initMap(); // Karte neu zeichnen (Marker werden aktualisiert)
+            initMap(); // redraw map (markers will be updated)
             renderStationTable();
         });
         state.markers.push(m);
     });
 
-    // zoom, to show all stations + center
+    // zoom to show all stations + center
     if (state.stations.length > 0) {
         const bounds = L.latLngBounds([[lat, lon]]);
         state.stations.forEach(s => bounds.extend([s.latitude, s.longitude]));
         state.map.fitBounds(bounds, { padding: [50, 50] });
     } else {
-        // Wenn keine Stationen, trotzdem auf Zentrum zoomen (Radius sichtbar)
+        // If no stations, zoom to center anyway (radius visible)
         state.map.setView([lat, lon], 8);
     }
 }
+
+// Initialization
+const savedLang = localStorage.getItem('preferred-language');
+const browserLang = navigator.language.startsWith('de') ? 'de' : 'en';
+state.language = savedLang || browserLang;
+
+document.querySelectorAll('.lang-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        setLanguage(e.target.dataset.lang);
+    });
+});
 
 $('searchForm').addEventListener('submit', (e) => { e.preventDefault(); searchStations(); });
 $('showDataButton').addEventListener('click', () => { if (state.selectedId) loadClimate(); });
@@ -378,3 +540,4 @@ $('stationSelect').addEventListener('change', (e) => {
 });
 
 showPage('search');
+translatePage(); // Initial translation
