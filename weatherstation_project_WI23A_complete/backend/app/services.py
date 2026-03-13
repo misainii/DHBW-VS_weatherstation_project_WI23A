@@ -175,49 +175,66 @@ class WeatherstationService:
 
     def _calculate_seasonal_averages(self, monthly_averages: Dict[Tuple[int, int], Dict[str, float]],
                                      start_year: int, end_year: int, latitude: float) -> List[Dict[str, Any]]:
+        """
+        Berechnet saisonale Mittelwerte.
+        Für die Nordhalbkugel:
+          - Winter (Dez, Jan, Feb) wird dem Jahr des Dezembers zugeordnet.
+          - Alle anderen Jahreszeiten verbleiben im Jahr der Monate.
+        Für die Südhalbkugel analog:
+          - Sommer (Dez, Jan, Feb) wird dem Jahr des Dezembers zugeordnet.
+          - Übrige Jahreszeiten im Jahr der Monate.
+        Es werden alle verfügbaren Monate gemittelt (auch wenn nur 1 oder 2 vorliegen).
+        """
         is_northern = latitude >= 0
+
         if is_northern:
+            # Nordhalbkugel
             seasons = {
-                'spring': [3, 4, 5],
-                'summer': [6, 7, 8],
-                'autumn': [9, 10, 11],
-                'winter': [12, 1, 2],
+                'spring': [(3, 0), (4, 0), (5, 0)],          # Mär, Apr, Mai
+                'summer': [(6, 0), (7, 0), (8, 0)],          # Jun, Jul, Aug
+                'autumn': [(9, 0), (10, 0), (11, 0)],        # Sep, Okt, Nov
+                'winter': [(12, 0), (1, 1), (2, 1)],         # Dez (Jahr+0), Jan (Jahr+1), Feb (Jahr+1)
             }
         else:
+            # Südhalbkugel
             seasons = {
-                'spring': [9, 10, 11],
-                'summer': [12, 1, 2],
-                'autumn': [3, 4, 5],
-                'winter': [6, 7, 8],
+                'spring': [(9, 0), (10, 0), (11, 0)],        # Sep, Okt, Nov
+                'summer': [(12, 0), (1, 1), (2, 1)],         # Dez (Jahr+0), Jan (Jahr+1), Feb (Jahr+1)
+                'autumn': [(3, 0), (4, 0), (5, 0)],          # Mär, Apr, Mai
+                'winter': [(6, 0), (7, 0), (8, 0)],          # Jun, Jul, Aug
             }
 
         seasonal_results = []
-        for year in range(start_year, end_year + 1):
-            for season_name, months in seasons.items():
+
+        # Iteriere über jedes Jahr im angefragten Bereich
+        for target_year in range(start_year, end_year + 1):
+            for season_name, month_offsets in seasons.items():
                 tmin_vals = []
                 tmax_vals = []
-                for month in months:
-                    check_year = year - 1 if month == 12 else year
-                    if check_year < start_year or check_year > end_year:
-                        continue
-                    key = (check_year, month)
+
+                for month, offset in month_offsets:
+                    actual_year = target_year + offset
+                    key = (actual_year, month)
                     if key in monthly_averages:
                         if 'TMIN' in monthly_averages[key]:
                             tmin_vals.append(monthly_averages[key]['TMIN'])
                         if 'TMAX' in monthly_averages[key]:
                             tmax_vals.append(monthly_averages[key]['TMAX'])
-                if len(tmin_vals) == 3:
+
+                # Mittelwert bilden, wenn mindestens ein Monat vorhanden ist
+                if tmin_vals:
                     seasonal_results.append({
-                        'year': year,
+                        'year': target_year,
                         'season': season_name,
-                        f'{season_name}_tmin': round(sum(tmin_vals) / 3, 1)
+                        f'{season_name}_tmin': round(sum(tmin_vals) / len(tmin_vals), 1)
                     })
-                if len(tmax_vals) == 3:
+                if tmax_vals:
                     seasonal_results.append({
-                        'year': year,
+                        'year': target_year,
                         'season': season_name,
-                        f'{season_name}_tmax': round(sum(tmax_vals) / 3, 1)
+                        f'{season_name}_tmax': round(sum(tmax_vals) / len(tmax_vals), 1)
                     })
+
         return seasonal_results
 
     def get_climate_summary(self, station_id: str, start_year: int, end_year: int) -> Dict[str, Any]:
@@ -246,42 +263,34 @@ class WeatherstationService:
         annual = self._calculate_yearly_averages(monthly, start_year, end_year)
         seasonal = self._calculate_seasonal_averages(monthly, start_year, end_year, station.latitude)
         
-        seasonal_by_year_season = {}
+        # Tabelle aufbauen
+        table_dict = {year: {'year': year} for year in range(start_year, end_year + 1)}
+        
+        # Annuale Werte eintragen
+        for a in annual:
+            year = a['year']
+            if year in table_dict:
+                if 'annual_tmin' in a:
+                    table_dict[year]['annual_tmin'] = a['annual_tmin']
+                if 'annual_tmax' in a:
+                    table_dict[year]['annual_tmax'] = a['annual_tmax']
+        
+        # Saisonale Werte eintragen
         for s in seasonal:
             year = s['year']
             season = s['season']
-            key = f"{year}_{season}"
-            if key not in seasonal_by_year_season:
-                seasonal_by_year_season[key] = {}
-            if f'{season}_tmin' in s:
-                seasonal_by_year_season[key][f'{season}_tmin'] = s[f'{season}_tmin']
-            if f'{season}_tmax' in s:
-                seasonal_by_year_season[key][f'{season}_tmax'] = s[f'{season}_tmax']
+            if year in table_dict:
+                if f'{season}_tmin' in s:
+                    table_dict[year][f'{season}_tmin'] = s[f'{season}_tmin']
+                if f'{season}_tmax' in s:
+                    table_dict[year][f'{season}_tmax'] = s[f'{season}_tmax']
         
-        annual_by_year = {a['year']: a for a in annual}
-        table_data = []
+        table_data = [table_dict[year] for year in sorted(table_dict.keys())]
         
-        for year in range(start_year, end_year + 1):
-            row = {'year': year}
-            if year in annual_by_year:
-                if 'annual_tmin' in annual_by_year[year]:
-                    row['annual_tmin'] = annual_by_year[year]['annual_tmin']
-                if 'annual_tmax' in annual_by_year[year]:
-                    row['annual_tmax'] = annual_by_year[year]['annual_tmax']
-            
-            for season in ['spring', 'summer', 'autumn', 'winter']:
-                key = f"{year}_{season}"
-                if key in seasonal_by_year_season:
-                    if f'{season}_tmin' in seasonal_by_year_season[key]:
-                        row[f'{season}_tmin'] = seasonal_by_year_season[key][f'{season}_tmin']
-                    if f'{season}_tmax' in seasonal_by_year_season[key]:
-                        row[f'{season}_tmax'] = seasonal_by_year_season[key][f'{season}_tmax']
-            
-            table_data.append(row)
-        
+        # Series für das Frontend
         annual_series = []
-        tmin_points = [{'year': r['year'], 'value': r['annual_tmin']} for r in table_data if 'annual_tmin' in r and r['annual_tmin'] is not None]
-        tmax_points = [{'year': r['year'], 'value': r['annual_tmax']} for r in table_data if 'annual_tmax' in r and r['annual_tmax'] is not None]
+        tmin_points = [{'year': row['year'], 'value': row['annual_tmin']} for row in table_data if 'annual_tmin' in row and row['annual_tmin'] is not None]
+        tmax_points = [{'year': row['year'], 'value': row['annual_tmax']} for row in table_data if 'annual_tmax' in row and row['annual_tmax'] is not None]
         
         if tmin_points:
             annual_series.append({"name": "annual_tmin", "label_de": "Jährliches TMIN", "label_en": "Annual TMIN", "points": tmin_points})
@@ -290,8 +299,8 @@ class WeatherstationService:
         
         seasonal_series = []
         for season in ['spring', 'summer', 'autumn', 'winter']:
-            tmin_points = [{'year': r['year'], 'value': r[f'{season}_tmin']} for r in table_data if f'{season}_tmin' in r and r[f'{season}_tmin'] is not None]
-            tmax_points = [{'year': r['year'], 'value': r[f'{season}_tmax']} for r in table_data if f'{season}_tmax' in r and r[f'{season}_tmax'] is not None]
+            tmin_points = [{'year': row['year'], 'value': row[f'{season}_tmin']} for row in table_data if f'{season}_tmin' in row and row[f'{season}_tmin'] is not None]
+            tmax_points = [{'year': row['year'], 'value': row[f'{season}_tmax']} for row in table_data if f'{season}_tmax' in row and row[f'{season}_tmax'] is not None]
             
             if tmin_points:
                 seasonal_series.append({"name": f"{season}_tmin", "label_de": f"{season.capitalize()} TMIN", "label_en": f"{season.capitalize()} TMIN", "points": tmin_points})
