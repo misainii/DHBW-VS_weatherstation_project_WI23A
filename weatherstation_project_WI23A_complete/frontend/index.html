@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Weatherstation Explorer</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="browser-window" aria-label="Weatherstation mockup application">
+        <header class="browser-bar">
+          <div class="browser-dots" aria-hidden="true">
+            <span class="dot red"></span>
+            <span class="dot yellow"></span>
+            <span class="dot green"></span>
+          </div>
+          <div class="address-bar" id="browserPath">weatherstation.draft/3.1.1</div>
+          <div class="browser-actions" aria-hidden="true">
+            <span></span><span></span><span></span>
+          </div>
+        </header>
+
+        <!-- Seite 1: Suche -->
+        <section id="pageSearch" class="page-layout">
+          <aside class="sidebar search-sidebar">
+            <div class="sidebar-title">
+              <svg class="magnifier" viewBox="0 0 64 64" aria-hidden="true">
+                <circle cx="26" cy="26" r="13" fill="none" stroke="currentColor" stroke-width="4"></circle>
+                <line x1="36" y1="36" x2="50" y2="50" stroke="currentColor" stroke-width="5" stroke-linecap="round"></line>
+              </svg>
+              <span>Search for your station</span>
+            </div>
+
+            <form id="searchForm" class="search-form">
+              <label>Latitude:<input id="latitude" type="number" step="0.0001" value="49.4521" required /></label>
+              <label>Longitude:<input id="longitude" type="number" step="0.0001" value="11.0767" required /></label>
+              <label>Radius (km):<input id="radius" type="number" step="1" min="1" value="60" required /></label>
+              <label>Selection:<input id="limit" type="number" step="1" min="1" max="20" value="3" required /></label>
+              <label>Start:<input id="startYear" type="number" step="1" value="1985" required /></label>
+              <label>End:<input id="endYear" type="number" step="1" value="2025" required /></label>
+
+              <button id="searchButton" class="cta-button search-button" type="submit">Search!</button>
+              <p id="searchFeedback" class="feedback-message" role="status" aria-live="polite"></p>
+            </form>
+          </aside>
+
+          <section class="hero-panel">
+            <h1 class="display-title title-search">Search for <span class="circled">more</span>…</h1>
+            <img src="river-hero.png" alt="River landscape" class="hero-image" />
+            <div class="tagline-row">
+              <p>Find weather stations contributing to the Global Historical Climatology Network</p>
+              <div class="flower" aria-hidden="true"></div>
+            </div>
+          </section>
+        </section>
+
+        <!-- Seite 2: Stationsauswahl mit Leaflet -->
+        <section id="pageStations" class="page-layout hidden">
+          <aside class="sidebar station-sidebar">
+            <div class="sidebar-title">
+              <svg class="magnifier" viewBox="0 0 64 64" aria-hidden="true">
+                <circle cx="26" cy="26" r="13" fill="none" stroke="currentColor" stroke-width="4"></circle>
+                <line x1="36" y1="36" x2="50" y2="50" stroke="currentColor" stroke-width="5" stroke-linecap="round"></line>
+              </svg>
+              <span>Search for your station</span>
+            </div>
+
+            <label class="select-label">
+              <span>Select by Name:</span>
+              <select id="stationSelect"></select>
+            </label>
+
+            <button id="showDataButton" class="cta-button showdata-button" type="button">Show Data</button>
+            <button id="backToSearchButton" class="subtle-button" type="button">Back</button>
+          </aside>
+
+          <section class="stations-panel">
+            <h1 class="display-title title-stations"><span class="circled">Available</span> Stations …</h1>
+
+            <div class="stations-top-row">
+              <div class="map-card">
+                <div id="leafletMap" class="leaflet-map-container"></div>
+              </div>
+
+              <div class="station-notes">
+                <ul>
+                  <li>Click on map markers to select a station</li>
+                  <li id="stationGapNote" class="warning-text">Some stations contain missing data!</li>
+                </ul>
+              </div>
+            </div>
+
+            <div class="station-table-wrap">
+              <table class="station-table" id="stationTable">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Distance</th>
+                    <th>Data</th>
+                    <th>Choose</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <!-- Seite 3: Klimadaten -->
+        <section id="pageClimate" class="page-layout hidden">
+          <aside class="sidebar climate-sidebar">
+            <div class="sidebar-title data-title">
+              <svg class="pointer-icon" viewBox="0 0 64 64" aria-hidden="true">
+                <circle cx="18" cy="18" r="3.5" fill="currentColor"></circle>
+                <line x1="18" y1="21" x2="18" y2="44" stroke="currentColor" stroke-width="3"></line>
+                <line x1="18" y1="28" x2="30" y2="38" stroke="currentColor" stroke-width="3"></line>
+                <line x1="18" y1="32" x2="8" y2="48" stroke="currentColor" stroke-width="3"></line>
+                <line x1="18" y1="44" x2="12" y2="58" stroke="currentColor" stroke-width="3"></line>
+                <line x1="18" y1="44" x2="28" y2="57" stroke="currentColor" stroke-width="3"></line>
+                <path d="M31 15c10 0 18 4 24 10-6 6-14 10-24 10" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"></path>
+              </svg>
+              <span>Data for your station</span>
+            </div>
+          </aside>
+
+          <section class="climate-panel">
+            <div class="climate-header-row">
+              <h1 class="display-title title-data"><span id="climateTitleStation">Station</span> data…</h1>
+              <div class="flower" aria-hidden="true"></div>
+            </div>
+
+            <div class="climate-content-row">
+              <div class="chart-side">
+                <div id="chartLegend" class="checkbox-group"></div>
+                
+                <div class="chart-container">
+                  <svg id="chart" width="760" height="400" viewBox="0 0 760 400" aria-label="Temperature chart"></svg>
+                </div>
+                
+                <div id="gapWarning" class="gap-warning hidden"></div>
+              </div>
+
+              <div class="summary-side">
+                <div class="compact-table-wrap">
+                  <div id="compactTable" class="table-container"></div>
+                </div>
+
+                <div class="button-group">
+                  <button id="selectNewStationButton" class="cta-button select-new-button" type="button">Select New Station</button>
+                  <button id="backToStationsButton" class="subtle-button" type="button">Back to Stations</button>
+                </div>
+              </div>
+            </div>
+          </section>
+        </section>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
