@@ -36,7 +36,7 @@ def parse_stations_file(path: Path) -> list[Station]:
                 except:
                     continue
     except Exception as e:
-        logger.error(f"Fehler beim Lesen der Stationsdatei: {e}")
+        logger.error(f"error reading stations data: {e}")
     return stations
 
 
@@ -63,7 +63,7 @@ def parse_inventory_file(path: Path) -> list[InventoryRecord]:
                 except:
                     continue
     except Exception as e:
-        logger.error(f"Fehler beim Lesen der Inventory-Datei: {e}")
+        logger.error(f"error reading inventory data: {e}")
     return records
 
 
@@ -102,5 +102,5 @@ def parse_by_station_csv(path: Path) -> list[DailyObservation]:
                 except:
                     continue
     except Exception as e:
-        logger.error(f"Fehler beim Lesen der CSV-Datei: {e}")
+        logger.error(f"error reading CSV data: {e}")
     return observations
