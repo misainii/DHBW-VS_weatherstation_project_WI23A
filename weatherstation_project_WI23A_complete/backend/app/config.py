@@ -7,12 +7,12 @@ from pydantic import Field
 
 
 class Settings(BaseSettings):
-    # App configuration
+    # app configuration
     app_name: str = "Weatherstation Explorer API"
     api_prefix: str = "/api"
     log_level: str = Field("INFO", env="LOG_LEVEL")
     
-    # Data source configuration - IMMER AWS
+    # Data source configuration - always AWS
     ghcn_source_mode: str = Field("remote_aws_yearly", env="GHCN_SOURCE_MODE")
     sample_data_dir: Path = Field(Path("/app/data/sample"), env="SAMPLE_DATA_DIR")
     
@@ -22,7 +22,7 @@ class Settings(BaseSettings):
         env="REMOTE_NOAA_BY_STATION_BASE_URL"
     )
     
-    # AWS S3 configuration (ohne Account erforderlich)
+    # AWS S3 configuration
     remote_aws_yearly_base_url: str = Field(
         "https://noaa-ghcn-pds.s3.amazonaws.com/csv",
         env="REMOTE_AWS_YEARLY_BASE_URL"
