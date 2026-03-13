@@ -19,6 +19,9 @@ function showPage(page) {
 }
 
 async function searchStations() {
+    const feedback = $('searchFeedback');
+    feedback.textContent = '';
+    feedback.classList.remove('error');
     const params = new URLSearchParams({
         latitude: $('latitude').value,
         longitude: $('longitude').value,
@@ -34,7 +37,12 @@ async function searchStations() {
             throw new Error(`Server antwortet mit ${res.status}: ${text}`);
         }
         const data = await res.json();
-        state.stations = data.stations || [];
+        if (!data.stations || data.stations.length === 0) {
+            feedback.textContent = "Station couldn't be found. Try again.";
+            feedback.classList.add('error');
+            return;
+        }
+        state.stations = data.stations;
         state.selectedId = state.stations[0]?.station_id || null;
         renderStationTable();
         showPage('stations');
