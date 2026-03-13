@@ -176,19 +176,19 @@ class WeatherstationService:
     def _calculate_seasonal_averages(self, monthly_averages: Dict[Tuple[int, int], Dict[str, float]],
                                      start_year: int, end_year: int, latitude: float) -> List[Dict[str, Any]]:
         """
-        Berechnet saisonale Mittelwerte.
-        Für die Nordhalbkugel:
-          - Winter (Dez, Jan, Feb) wird dem Jahr des Dezembers zugeordnet.
-          - Alle anderen Jahreszeiten verbleiben im Jahr der Monate.
-        Für die Südhalbkugel analog:
-          - Sommer (Dez, Jan, Feb) wird dem Jahr des Dezembers zugeordnet.
-          - Übrige Jahreszeiten im Jahr der Monate.
-        Es werden alle verfügbaren Monate gemittelt (auch wenn nur 1 oder 2 vorliegen).
+        calculating seasonal mean.
+        northern hemisphere:
+          - winter (Dec, Jan, Feb) contains data of dec (year that is given) and jan, feb (following year).
+          - other seasons remain within the same year.
+        southern hemisphere:
+          - summer (Dec, Jan, Feb) contains data of dec (year that is given) and jan, feb (following year).
+           - other seasons remain within the same year.
+        all available months are calculated (even if only  1 or 2 are available).
         """
         is_northern = latitude >= 0
 
         if is_northern:
-            # Nordhalbkugel
+            # northern hemisphere
             seasons = {
                 'spring': [(3, 0), (4, 0), (5, 0)],          # Mär, Apr, Mai
                 'summer': [(6, 0), (7, 0), (8, 0)],          # Jun, Jul, Aug
@@ -196,7 +196,7 @@ class WeatherstationService:
                 'winter': [(12, 0), (1, 1), (2, 1)],         # Dez (Jahr+0), Jan (Jahr+1), Feb (Jahr+1)
             }
         else:
-            # Südhalbkugel
+            # southern hemisphere
             seasons = {
                 'spring': [(9, 0), (10, 0), (11, 0)],        # Sep, Okt, Nov
                 'summer': [(12, 0), (1, 1), (2, 1)],         # Dez (Jahr+0), Jan (Jahr+1), Feb (Jahr+1)
@@ -206,7 +206,7 @@ class WeatherstationService:
 
         seasonal_results = []
 
-        # Iteriere über jedes Jahr im angefragten Bereich
+        # iterate over whole year
         for target_year in range(start_year, end_year + 1):
             for season_name, month_offsets in seasons.items():
                 tmin_vals = []
@@ -221,7 +221,7 @@ class WeatherstationService:
                         if 'TMAX' in monthly_averages[key]:
                             tmax_vals.append(monthly_averages[key]['TMAX'])
 
-                # Mittelwert bilden, wenn mindestens ein Monat vorhanden ist
+                # calculate mean, if at least one month available
                 if tmin_vals:
                     seasonal_results.append({
                         'year': target_year,
@@ -238,12 +238,12 @@ class WeatherstationService:
         return seasonal_results
 
     def get_climate_summary(self, station_id: str, start_year: int, end_year: int) -> Dict[str, Any]:
-        logger.info(f"Erstelle Klimazusammenfassung für {station_id} ({start_year}-{end_year})")
+        logger.info(f"climate summary for {station_id} ({start_year}-{end_year})")
         
         stations = self.repo.load_stations()
         station = next((s for s in stations if s.station_id == station_id), None)
         if not station:
-            raise ValueError(f"Station {station_id} nicht gefunden")
+            raise ValueError(f"Station {station_id} not found")
         
         observations = self.repo.load_station_observations(station_id, start_year, end_year)
         
@@ -263,10 +263,10 @@ class WeatherstationService:
         annual = self._calculate_yearly_averages(monthly, start_year, end_year)
         seasonal = self._calculate_seasonal_averages(monthly, start_year, end_year, station.latitude)
         
-        # Tabelle aufbauen
+        # create table
         table_dict = {year: {'year': year} for year in range(start_year, end_year + 1)}
         
-        # Annuale Werte eintragen
+        # annual data
         for a in annual:
             year = a['year']
             if year in table_dict:
@@ -275,7 +275,7 @@ class WeatherstationService:
                 if 'annual_tmax' in a:
                     table_dict[year]['annual_tmax'] = a['annual_tmax']
         
-        # Saisonale Werte eintragen
+        # seasonal data
         for s in seasonal:
             year = s['year']
             season = s['season']
@@ -287,7 +287,7 @@ class WeatherstationService:
         
         table_data = [table_dict[year] for year in sorted(table_dict.keys())]
         
-        # Series für das Frontend
+        # series for frontend
         annual_series = []
         tmin_points = [{'year': row['year'], 'value': row['annual_tmin']} for row in table_data if 'annual_tmin' in row and row['annual_tmin'] is not None]
         tmax_points = [{'year': row['year'], 'value': row['annual_tmax']} for row in table_data if 'annual_tmax' in row and row['annual_tmax'] is not None]
