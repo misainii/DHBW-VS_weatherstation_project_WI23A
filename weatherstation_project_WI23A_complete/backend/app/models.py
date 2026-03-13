@@ -16,7 +16,7 @@ class Station(BaseModel):
     elevation_m: Optional[float] = None
     state: Optional[str] = None
     
-    # Diese Felder werden dynamisch hinzugefügt
+    # dynamic fields
     distance_km: Optional[float] = None
     first_year: Optional[int] = None
     last_year: Optional[int] = None
