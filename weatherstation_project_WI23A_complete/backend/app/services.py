@@ -298,14 +298,30 @@ class WeatherstationService:
             annual_series.append({"name": "annual_tmax", "label_de": "Jährliches TMAX", "label_en": "Annual TMAX", "points": tmax_points})
         
         seasonal_series = []
+        season_names_de = {
+            'spring': 'Frühling',
+            'summer': 'Sommer',
+            'autumn': 'Herbst',
+            'winter': 'Winter'
+        }
         for season in ['spring', 'summer', 'autumn', 'winter']:
             tmin_points = [{'year': row['year'], 'value': row[f'{season}_tmin']} for row in table_data if f'{season}_tmin' in row and row[f'{season}_tmin'] is not None]
             tmax_points = [{'year': row['year'], 'value': row[f'{season}_tmax']} for row in table_data if f'{season}_tmax' in row and row[f'{season}_tmax'] is not None]
             
             if tmin_points:
-                seasonal_series.append({"name": f"{season}_tmin", "label_de": f"{season.capitalize()} TMIN", "label_en": f"{season.capitalize()} TMIN", "points": tmin_points})
+                seasonal_series.append({
+                    "name": f"{season}_tmin",
+                    "label_de": f"{season_names_de[season]} TMIN",
+                    "label_en": f"{season.capitalize()} TMIN",
+                    "points": tmin_points
+                })
             if tmax_points:
-                seasonal_series.append({"name": f"{season}_tmax", "label_de": f"{season.capitalize()} TMAX", "label_en": f"{season.capitalize()} TMAX", "points": tmax_points})
+                seasonal_series.append({
+                    "name": f"{season}_tmax",
+                    "label_de": f"{season_names_de[season]} TMAX",
+                    "label_en": f"{season.capitalize()} TMAX",
+                    "points": tmax_points
+                })
         
         years_with_data = {row["year"] for row in table_data if 'annual_tmin' in row or 'annual_tmax' in row}
         missing_years = [y for y in range(start_year, end_year + 1) if y not in years_with_data]
