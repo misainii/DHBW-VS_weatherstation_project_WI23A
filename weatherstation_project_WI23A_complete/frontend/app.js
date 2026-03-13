@@ -6,7 +6,7 @@ const state = {
     activeSeries: new Set(['annual_tmin', 'annual_tmax', 'spring_tmin', 'spring_tmax', 'summer_tmin', 'summer_tmax', 'autumn_tmin', 'autumn_tmax', 'winter_tmin', 'winter_tmax']),
     map: null,
     markers: [],
-    radiusCircle: null  // für den Kreis des Suchradius
+    radiusCircle: null  // search radius cricle
 };
 
 const $ = id => document.getElementById(id);
@@ -175,7 +175,7 @@ function renderTable() {
         return;
     }
 
-    // Nur Spalten für aktive Reihen, die auch in der Tabelle vorkommen
+    // only actives in table
     const active = Array.from(state.activeSeries).filter(name => 
         state.climate.table.some(row => row[name] !== undefined)
     );
@@ -268,7 +268,7 @@ function drawChart() {
         const color = colorMap[s.name] || '#888';
         const sorted = [...s.points].sort((a,b) => a.year - b.year);
 
-        // Linien nur zwischen aufeinanderfolgenden Jahren
+        // lines only between directly following years
         let start = 0;
         for (let i = 1; i <= sorted.length; i++) {
             if (i === sorted.length || sorted[i].year - sorted[i-1].year > 1) {
@@ -285,7 +285,7 @@ function drawChart() {
             }
         }
 
-        // Punkte zeichnen
+        // dots
         sorted.forEach(p => {
             const x = pad.l + (w - pad.l - pad.r) * (p.year - minYear) / (maxYear - minYear);
             const y = pad.t + (h - pad.t - pad.b) * (1 - (p.value - minVal) / (maxVal - minVal));
@@ -309,18 +309,18 @@ function initMap() {
         state.map.setView([lat, lon], 7);
     }
 
-    // Alte Marker entfernen
+    // remove old markers
     if (state.markers) {
         state.markers.forEach(m => m.remove());
     }
     state.markers = [];
 
-    // Alten Kreis entfernen, falls vorhanden
+    // remove old radius
     if (state.radiusCircle) {
         state.radiusCircle.remove();
     }
 
-    // Suchzentrum als Marker
+    // search center
     L.circleMarker([lat, lon], {
         radius: 8,
         color: '#dc3545',
@@ -328,7 +328,7 @@ function initMap() {
         fillOpacity: 1
     }).addTo(state.map).bindTooltip('Search Center');
 
-    // Radius-Kreis zeichnen
+    // draw radius center
     state.radiusCircle = L.circle([lat, lon], {
         radius: radiusKm * 1000,
         color: '#dc3545',
@@ -338,7 +338,7 @@ function initMap() {
         interactive: false  // verhindert, dass der Kreis Klicks abfängt
     }).addTo(state.map);
 
-    // Stationen als Marker
+    // stations as markers
     state.stations.forEach(s => {
         const m = L.circleMarker([s.latitude, s.longitude], {
             radius: s.station_id === state.selectedId ? 8 : 6,
@@ -355,7 +355,7 @@ function initMap() {
         state.markers.push(m);
     });
 
-    // Zoom anpassen, um alle Stationen + Zentrum zu zeigen
+    // zoom, to show all stations + center
     if (state.stations.length > 0) {
         const bounds = L.latLngBounds([[lat, lon]]);
         state.stations.forEach(s => bounds.extend([s.latitude, s.longitude]));
